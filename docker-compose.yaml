@@ -17,7 +17,7 @@ services:
       - consort-network
 
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}" ]
+      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,10 +63,36 @@ services:
     networks:
       - consort-network
 
+  redis-logging-service:
+    image: redis:7.2
+    container_name: consort-redis-logging-service
+    restart: unless-stopped
+    command: redis-server --save 300 10 --loglevel warning
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis_logging_data:/data
+    networks:
+      - consort-network
+
+  redis-notification-service:
+    image: redis:7.2
+    container_name: consort-redis-notification-service
+    restart: unless-stopped
+    command: redis-server --save 300 10 --loglevel warning
+    ports:
+      - "6383:6379"
+    volumes:
+      - redis_notification_data:/data
+    networks:
+      - consort-network
+
 networks:
   consort-network:
 
 volumes:
   postgres_data:
   redis_user_data:
+  redis_logging_data:
+  redis_notification_data:
   kafka_data:

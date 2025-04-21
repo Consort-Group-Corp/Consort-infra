@@ -87,6 +87,19 @@ services:
     networks:
       - consort-network
 
+  redis-course-service:
+    image: redis:7.2
+    container_name: consort-redis-course-service
+    restart: unless-stopped
+    command: redis-server --save 300 10 --loglevel warning
+    ports:
+      - "6384:6379"
+    volumes:
+      - redis_course_data:/data
+    networks:
+      - consort-network
+
+
 networks:
   consort-network:
 
@@ -95,4 +108,5 @@ volumes:
   redis_user_data:
   redis_logging_data:
   redis_notification_data:
+  redis_course_data:
   kafka_data:

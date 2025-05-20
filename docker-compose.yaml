@@ -1,3 +1,18 @@
+version: '3.8'
+
+networks:
+  consort-network:
+    name: consort-infra_consort-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_user_data:
+  redis_logging_data:
+  redis_notification_data:
+  redis_course_data:
+  kafka_data:
+
 services:
   db:
     image: postgres:15
@@ -15,9 +30,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - consort-network
-
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}" ]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,9 +58,8 @@ services:
       - kafka_data:/bitnami/kafka
     networks:
       - consort-network
-
     healthcheck:
-      test: [ "CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list" ]
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -99,14 +112,51 @@ services:
     networks:
       - consort-network
 
+  eureka-service:
+    build:
+      context: ../eureka_service
+      dockerfile: Dockerfile
+    container_name: consort-eureka-service
+    restart: unless-stopped
+    ports:
+      - "8761:8762"
+    networks:
+      consort-network:
+        aliases:
+          - eureka-service
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8762/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-networks:
-  consort-network:
+  api-gateway-service:
+    build:
+      context: ../api_gateway_service
+      dockerfile: Dockerfile
+    container_name: consort-api-gateway-service
+    env_file:
+      - .env
+    depends_on:
+      eureka-service:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sleep 20 && java -Dsun.net.inetaddr.ttl=0 -jar app.jar
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Из контейнера host.docker.internal:8761 резолвится в localhost:8761 хоста
+      - SPRING_CLOUD_EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://host.docker.internal:8761/eureka/
+    ports:
+      - "8080:8085"
+    networks:
+      - consort-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-volumes:
-  postgres_data:
-  redis_user_data:
-  redis_logging_data:
-  redis_notification_data:
-  redis_course_data:
-  kafka_data:

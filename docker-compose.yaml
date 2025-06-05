@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   consort-network:
     name: consort-infra_consort-network
@@ -11,6 +9,7 @@ volumes:
   redis_logging_data:
   redis_notification_data:
   redis_course_data:
+  redis_forum_data:
   kafka_data:
 
 services:
@@ -111,6 +110,18 @@ services:
       - "6384:6379"
     volumes:
       - redis_course_data:/data
+    networks:
+      - consort-network
+
+  redis-forum-service:
+    image: redis:7.2
+    container_name: consort-redis-forum-service
+    restart: unless-stopped
+    command: redis-server --save 300 10 --loglevel warning
+    ports:
+      - "6385:6379"
+    volumes:
+      - redis_forum_data:/data
     networks:
       - consort-network
 

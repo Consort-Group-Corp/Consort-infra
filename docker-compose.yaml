@@ -11,6 +11,7 @@ volumes:
   redis_course_data:
   redis_forum_data:
   redis_webinar_data:
+  redis_support_data:
   kafka_data:
 
 services:
@@ -135,6 +136,18 @@ services:
       - "6386:6379"
     volumes:
       - redis_webinar_data:/data
+    networks:
+      - consort-network
+
+  redis-support-service:
+    image: redis:7.2
+    container_name: consort-redis-support-service
+    restart: unless-stopped
+    command: redis-server --save 300 10 --loglevel warning
+    ports:
+      - "6387:6379"
+    volumes:
+      - redis_support_data:/data
     networks:
       - consort-network
 
